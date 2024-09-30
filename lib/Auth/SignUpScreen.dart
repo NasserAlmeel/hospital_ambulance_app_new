@@ -1,8 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart'; // For Firestore (alternatively use Realtime Database)
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
-import 'package:location/location.dart'; // To get user's location
+import 'package:hospital_ambulance_app_new/services/authService.dart';
+
+import 'loginScreen.dart';
 
 class SignUpScreen extends StatefulWidget {
   @override
@@ -10,88 +12,50 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
-  TextEditingController nameController = TextEditingController();
-  TextEditingController emailController = TextEditingController();
-  TextEditingController phoneController = TextEditingController();
-  TextEditingController passwordController = TextEditingController();
-  LocationData? currentLocation;
-
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
   bool isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _getLocation();
-  }
-
-  Future<void> _getLocation() async {
-    Location location = new Location();
-    bool _serviceEnabled;
-    PermissionStatus _permissionGranted;
-
-    _serviceEnabled = await location.serviceEnabled();
-    if (!_serviceEnabled) {
-      _serviceEnabled = await location.requestService();
-      if (!_serviceEnabled) {
-        return;
-      }
-    }
-
-    _permissionGranted = await location.hasPermission();
-    if (_permissionGranted == PermissionStatus.denied) {
-      _permissionGranted = await location.requestPermission();
-      if (_permissionGranted != PermissionStatus.granted) {
-        return;
-      }
-    }
-
-    currentLocation = await location.getLocation();
-  }
 
   Future<void> signUp() async {
     setState(() {
       isLoading = true;
     });
 
+    String name = nameController.text.trim();
+    String email = emailController.text.trim();
+    String phone = phoneController.text.trim();
+    String password = passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty || name.isEmpty || phone.isEmpty) {
+      Fluttertoast.showToast(msg: 'Please fill all fields');
+      setState(() {
+        isLoading = false;
+      });
+      return;
+    }
+
     try {
-      // Firebase Authentication for creating the user
-      UserCredential userCredential = await FirebaseAuth.instance
-          .createUserWithEmailAndPassword(
-        email: emailController.text,
-        password: passwordController.text,
+      UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
       );
 
-      User? user = userCredential.user;
+      // Save user information in Firebase Database (Users collection)
+      await FirebaseDatabase.instance
+          .ref('users/${userCredential.user?.uid}')
+          .set({
+        'name': name,
+        'email': email,
+        'phone': phone,
+        'location': '', // Add logic to get location if necessary
+      });
 
-      // Store additional user info in Firestore
-      if (user != null) {
-        final docRef = FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid); // Users stored by UID
-
-        // Check if user already exists
-        final docSnapshot = await docRef.get();
-        if (docSnapshot.exists) {
-          Fluttertoast.showToast(msg: 'User already exists');
-        } else {
-          // Add user information in Firestore
-          await docRef.set({
-            'name': nameController.text,
-            'email': emailController.text,
-            'phone': phoneController.text,
-            'location': {
-              'latitude': currentLocation?.latitude,
-              'longitude': currentLocation?.longitude
-            },
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-
-          Fluttertoast.showToast(msg: 'Account created successfully');
-          // Navigate to HomePage or other screen
-        }
-      }
-    } catch (e) {
-      Fluttertoast.showToast(msg: 'Sign-up failed: $e');
+      Fluttertoast.showToast(msg: 'Sign up successful!');
+      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (context) => LoginScreen()));
+    } on FirebaseAuthException catch (e) {
+      Fluttertoast.showToast(msg: e.message ?? 'Error occurred');
     } finally {
       setState(() {
         isLoading = false;
@@ -102,44 +66,36 @@ class _SignUpScreenState extends State<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Sign Up'),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: InputDecoration(labelText: 'Full Name'),
-              ),
-              TextField(
-                controller: emailController,
-                decoration: InputDecoration(labelText: 'Email'),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              TextField(
-                controller: phoneController,
-                decoration: InputDecoration(labelText: 'Phone'),
-                keyboardType: TextInputType.phone,
-              ),
-              TextField(
-                controller: passwordController,
-                decoration: InputDecoration(labelText: 'Password'),
-                obscureText: true,
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: signUp,
-                child: isLoading
-                    ? CircularProgressIndicator(
-                  color: Colors.white,
-                )
-                    : Text('Sign Up'),
-              ),
-            ],
-          ),
+      appBar: AppBar(title: Text('Sign Up')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(labelText: 'Name'),
+            ),
+            TextField(
+              controller: emailController,
+              decoration: InputDecoration(labelText: 'Email'),
+            ),
+            TextField(
+              controller: phoneController,
+              decoration: InputDecoration(labelText: 'Phone'),
+            ),
+            TextField(
+              controller: passwordController,
+              obscureText: true,
+              decoration: InputDecoration(labelText: 'Password'),
+            ),
+            SizedBox(height: 20),
+            isLoading
+                ? CircularProgressIndicator()
+                : ElevatedButton(
+              onPressed: signUp,
+              child: Text('Sign Up'),
+            ),
+          ],
         ),
       ),
     );

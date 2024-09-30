@@ -50,6 +50,16 @@ class AuthService {
     }
   }
 
+  // Sign out
+  Future<void> signOut() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+      Fluttertoast.showToast(msg: 'Successfully signed out.');
+    } catch (e) {
+      Fluttertoast.showToast(msg: 'Error signing out: $e');
+    }
+  }
+
   // Logout method
   Future<void> logout(BuildContext context) async {
     await _auth.signOut();

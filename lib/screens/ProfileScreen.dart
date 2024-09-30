@@ -1,7 +1,7 @@
+import 'package:flutter/material.dart';
+import 'package:hospital_ambulance_app_new/services/authService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
 
 class ProfileScreen extends StatefulWidget {
   @override
@@ -9,94 +9,102 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  String? name;
+  String? email;
+  String? phoneNumber;
+  bool isLoading = true;
   final FirebaseAuth _auth = FirebaseAuth.instance;
-  final DatabaseReference _databaseRef = FirebaseDatabase.instance.ref('users');
-  User? currentUser;
-  String? userId;
-
-  String name = '';
-  String contact = '';
-  String liveLocation = '';
 
   @override
   void initState() {
     super.initState();
-    getCurrentUser();
+    fetchUserInfo();
   }
 
-  void getCurrentUser() {
-    currentUser = _auth.currentUser;
-    if (currentUser != null) {
-      userId = currentUser!.uid;
-      fetchUserData(userId!);
-    }
-  }
-
-  Future<void> fetchUserData(String userId) async {
-    try {
-      DatabaseEvent event = await _databaseRef.child(userId).once();
+  Future<void> fetchUserInfo() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      // Fetch user information from Firebase Database
+      DatabaseReference userRef = FirebaseDatabase.instance.ref('users/${user.uid}');
+      DatabaseEvent event = await userRef.once();
       final userData = event.snapshot.value as Map<dynamic, dynamic>?;
 
       if (userData != null) {
         setState(() {
-          name = userData['name'] ?? '';
-          contact = userData['contact'] ?? '';
-          liveLocation = userData['liveLocation'] ?? '';
+          name = userData['name'];
+          email = userData['email'];
+          phoneNumber = userData['phoneNumber'];
+          isLoading = false;
         });
       }
-    } catch (e) {
-      Fluttertoast.showToast(msg: 'Failed to fetch user data: $e');
     }
   }
 
-  Future<void> updateUserData() async {
-    if (userId != null) {
-      try {
-        await _databaseRef.child(userId!).update({
-          'name': name,
-          'contact': contact,
-          'liveLocation': liveLocation,
-        });
-        Fluttertoast.showToast(msg: 'Profile updated successfully!');
-      } catch (e) {
-        Fluttertoast.showToast(msg: 'Failed to update profile: $e');
-      }
+  Future<void> updateUserInfo() async {
+    User? user = _auth.currentUser;
+    if (user != null) {
+      DatabaseReference userRef = FirebaseDatabase.instance.ref('users/${user.uid}');
+      await userRef.update({
+        'name': name,
+        'email': email,
+        'phoneNumber': phoneNumber,
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Profile updated successfully!')));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Profile'),
-      ),
-      body: Padding(
+      appBar: AppBar(title: Text('Profile')),
+      body: isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Name:', style: TextStyle(fontSize: 18)),
             TextField(
-              onChanged: (value) => setState(() => name = value),
+              decoration: InputDecoration(labelText: 'Name'),
+              onChanged: (value) => name = value,
               controller: TextEditingController(text: name),
             ),
-            SizedBox(height: 10),
-            Text('Contact:', style: TextStyle(fontSize: 18)),
             TextField(
-              onChanged: (value) => setState(() => contact = value),
-              controller: TextEditingController(text: contact),
+              decoration: InputDecoration(labelText: 'Email'),
+              onChanged: (value) => email = value,
+              controller: TextEditingController(text: email),
+              readOnly: true, // Prevent email from being changed
             ),
-            SizedBox(height: 10),
-            Text('Live Location:', style: TextStyle(fontSize: 18)),
             TextField(
-              onChanged: (value) => setState(() => liveLocation = value),
-              controller: TextEditingController(text: liveLocation),
+              decoration: InputDecoration(labelText: 'Phone Number'),
+              onChanged: (value) => phoneNumber = value,
+              controller: TextEditingController(text: phoneNumber),
             ),
             SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: updateUserData,
-              child: Text('Update Profile'),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: updateUserInfo,
+                  child: Text('Update'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    AuthService().signOut();
+                    Navigator.of(context).pushReplacementNamed('/login');
+                  },
+                  child: Text('Logout'),
+                ),
+              ],
             ),
+            // Admin specific functionality can be added here
+            if (_auth.currentUser?.uid == "admin_user_id") // Replace with actual admin UID
+              ElevatedButton(
+                onPressed: () {
+                  // Implement deletion logic if needed
+                },
+                child: Text('Delete Profile'),
+              ),
           ],
         ),
       ),
