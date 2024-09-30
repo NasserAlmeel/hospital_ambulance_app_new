@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "179766205121",
+    "project_id": "new-amp",
+    "storage_bucket": "new-amp.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:179766205121:android:5a4ca86f3aa72ed7c59240",
+        "android_client_info": {
+          "package_name": "com.example.hospital_ambulance_app_new"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDcsKxlDM73Ez52hyQ44F88IC9-Elqp3CU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

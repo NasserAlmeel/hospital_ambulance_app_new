@@ -1,0 +1,47 @@
+plugins {
+    id "com.android.application"
+    id "kotlin-android"
+    // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
+    id "dev.flutter.flutter-gradle-plugin"
+    id 'com.google.gms.google-services'
+}
+ext.kotlin_version = '1.7.10' // Make sure to use a stable version
+
+android {
+    namespace = "com.example.hospital_ambulance_app_new"
+    compileSdkVersion 34
+
+    defaultConfig {
+        applicationId "com.example.hospital_ambulance_app_new"
+        minSdkVersion 23  // Required by firebase_auth
+        targetSdkVersion 34
+        versionCode 1  // Use hardcoded versionCode
+        versionName "1.0"  // Use hardcoded versionName
+    }
+
+    ndkVersion = flutter.ndkVersion
+
+    compileOptions {
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
+    }
+
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+
+    buildTypes {
+        release {
+            signingConfig signingConfigs.debug
+        }
+    }
+}
+
+flutter {
+    source = "../.."
+}
+
+dependencies {
+    implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    implementation platform('com.google.firebase:firebase-bom:33.3.0')
+}
