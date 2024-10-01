@@ -1,3 +1,4 @@
+// profileScreen.dart
 import 'package:flutter/material.dart';
 import 'package:hospital_ambulance_app_new/services/authService.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -27,9 +28,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       // Fetch user information from Firebase Database
       DatabaseReference userRef = FirebaseDatabase.instance.ref('users/${user.uid}');
       DatabaseEvent event = await userRef.once();
-      final userData = event.snapshot.value as Map<dynamic, dynamic>?;
-
-      if (userData != null) {
+      if (event.snapshot.value != null) {
+        final userData = event.snapshot.value as Map<dynamic, dynamic>;
         setState(() {
           name = userData['name'];
           email = userData['email'];
@@ -97,14 +97,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               ],
             ),
-            // Admin specific functionality can be added here
-            if (_auth.currentUser?.uid == "admin_user_id") // Replace with actual admin UID
-              ElevatedButton(
-                onPressed: () {
-                  // Implement deletion logic if needed
-                },
-                child: Text('Delete Profile'),
-              ),
           ],
         ),
       ),

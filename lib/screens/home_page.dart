@@ -12,6 +12,7 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
   String? userType; // Will determine the layout based on user type
   int _selectedIndex = 0; // For bottom navigation
+  bool isLoading = true; // To handle loading state
 
   @override
   void initState() {
@@ -21,17 +22,18 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> getUserType() async {
     final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      // Change this to use DatabaseEvent
-      final DatabaseEvent event = await FirebaseDatabase.instance.ref('users/$userId').once();
-      final DataSnapshot snapshot = event.snapshot;
+    final snapshot = await FirebaseDatabase.instance.ref('users/$userId').once();
 
-      if (snapshot.exists) {
-        setState(() {
-          // Cast the value to Map<String, dynamic> to access the userType
-          userType = (snapshot.value as Map<String, dynamic>)['userType'];
-        });
-      }
+    if (snapshot.snapshot.value != null) {
+      final userData = snapshot.snapshot.value as Map<String, dynamic>; // Casting to Map
+      setState(() {
+        userType = userData['userType']; // Now you can access the 'userType' field
+        isLoading = false;
+      });
+    } else {
+      setState(() {
+        isLoading = false; // Stop loading if no data is found
+      });
     }
   }
 
@@ -43,11 +45,13 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Choose the body based on user type
     Widget body;
 
-    // Choose the body based on user type
-    if (userType == null) {
+    if (isLoading) {
       body = Center(child: CircularProgressIndicator());
+    } else if (userType == null) {
+      body = Center(child: Text('User type not found.'));
     } else if (userType == 'Admin') {
       body = AdminDashboard(); // Admin Dashboard
     } else if (userType == 'Driver') {
